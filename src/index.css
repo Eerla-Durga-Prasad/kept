@@ -1,0 +1,199 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    background-color: #FAF7F2;
+    color: #1C1917;
+    accent-color: #C85A32;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  body {
+    background-color: #FAF7F2;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Selection highlight — terracotta tint */
+  ::selection {
+    background-color: rgba(200, 90, 50, 0.15);
+    color: #1C1917;
+  }
+
+  /* Smooth focus rings using terracotta */
+  :focus-visible {
+    outline: 2px solid #C85A32;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Custom subtle scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #DDD4C7;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #C85A32;
+  }
+}
+
+/* Hide scrollbar utility for tab navigation */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Text balance for headings */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Mobile responsive layout rules (<=767px) */
+@media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Safe word wrapping globally on mobile */
+  h1, h2, h3, h4, h5, h6, p, span, button {
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  /* Home Feature Cards: horizontal scroll with snap and comfortable card width */
+  .home-feature-cards {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    gap: 1rem !important;
+    padding-bottom: 0.75rem !important;
+    margin-left: -1rem !important;
+    margin-right: -1rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .home-feature-cards::-webkit-scrollbar {
+    display: none;
+  }
+  .home-feature-cards > button {
+    flex: 0 0 260px !important;
+    min-width: 260px !important;
+    max-width: 280px !important;
+    scroll-snap-align: start !important;
+  }
+
+  /* Kitchen Plan: readable mobile stack */
+  .kitchen-plan-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Recipe Grid: clean readable single-column cards on mobile */
+  .recipe-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1.25rem !important;
+  }
+
+  /* Meal Planner Date/Week Selector: centered, contained, single-line text on mobile (<=767px) */
+  .meal-planner-header {
+    flex-direction: column !important;
+  }
+  .meal-date-selector {
+    width: 100% !important;
+    max-width: 384px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+}
+
+/* Also apply same readable mobile layouts when inside simulated mobile viewport */
+.mobile-view {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+.mobile-view h1,
+.mobile-view h2,
+.mobile-view h3,
+.mobile-view h4,
+.mobile-view h5,
+.mobile-view h6,
+.mobile-view p,
+.mobile-view span,
+.mobile-view button {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.mobile-view .home-feature-cards {
+  display: flex !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory !important;
+  gap: 1rem !important;
+  padding-bottom: 0.75rem !important;
+  margin-left: -1rem !important;
+  margin-right: -1rem !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.mobile-view .home-feature-cards::-webkit-scrollbar {
+  display: none;
+}
+.mobile-view .home-feature-cards > button {
+  flex: 0 0 260px !important;
+  min-width: 260px !important;
+  max-width: 280px !important;
+  scroll-snap-align: start !important;
+}
+.mobile-view .kitchen-plan-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.75rem !important;
+}
+.mobile-view .recipe-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1.25rem !important;
+}
+.mobile-view .meal-planner-header {
+  flex-direction: column !important;
+}
+.mobile-view .meal-date-selector {
+  width: 100% !important;
+  max-width: 384px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+}
+
