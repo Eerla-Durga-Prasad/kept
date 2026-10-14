@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ShoppingBag, CalendarDays, BookOpen, ArrowRight, CheckCircle2, Clock } from 'lucide-react';
-import { HouseholdMember, Item, Meal } from '../sync/types';
+import { HouseholdMember, Item, Meal, MealType, DayOfWeek } from '../sync/types';
 import { NavTab } from '../components/Sidebar';
 
 interface HomeProps {
@@ -27,6 +27,56 @@ export const Home: React.FC<HomeProps> = ({
 }) => {
   const activeItems = items.filter((i) => !i.deleted_at);
   const remainingCount = activeItems.filter((i) => !i.checked).length;
+
+  const currentWeekLabel = useMemo(() => {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + diff);
+    const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+    const monMonth = monday.toLocaleDateString('en-US', { month: 'short' });
+    const sunMonth = sunday.toLocaleDateString('en-US', { month: 'short' });
+    if (monMonth === sunMonth) {
+      return `This week (${monMonth} ${monday.getDate()} – ${sunday.getDate()})`;
+    }
+    return `This week (${monMonth} ${monday.getDate()} – ${sunMonth} ${sunday.getDate()})`;
+  }, []);
+
+  // Today's Kitchen Plan: always display in exact order: 1. Breakfast, 2. Lunch, 3. Dinner
+  const kitchenPlanMeals = useMemo(() => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    const todayStr = `${y}-${m}-${d}`;
+    const days: DayOfWeek[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const todayDayOfWeek = days[today.getDay()];
+
+    const mealOrder: MealType[] = ['Breakfast', 'Lunch', 'Dinner'];
+    const result: Meal[] = [];
+
+    for (const type of mealOrder) {
+      const found =
+        meals.find((meal) => meal.meal_type === type && meal.date === todayStr) ||
+        meals.find((meal) => meal.meal_type === type && meal.day_of_week === todayDayOfWeek) ||
+        meals.find((meal) => meal.meal_type === type);
+      if (found) {
+        result.push(found);
+      }
+    }
+
+    if (result.length === 0) {
+      return [...meals]
+        .sort((a, b) => {
+          const idxA = mealOrder.indexOf(a.meal_type);
+          const idxB = mealOrder.indexOf(b.meal_type);
+          return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+        })
+        .slice(0, 3);
+    }
+
+    return result;
+  }, [meals]);
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-8 animate-fadeIn">
@@ -113,7 +163,7 @@ export const Home: React.FC<HomeProps> = ({
               Meal Planner
             </h2>
             <p className="text-xs text-ink-500 mt-1">
-              This week (Sep 22 – 28)
+              {currentWeekLabel}
             </p>
           </div>
           <ArrowRight className="w-4 h-4 text-ink-400 group-hover:text-botanical-700 group-hover:translate-x-1 transition-all absolute bottom-5 sm:bottom-6 right-5 sm:right-6" />
@@ -160,7 +210,7 @@ export const Home: React.FC<HomeProps> = ({
         </div>
 
         <div className="kitchen-plan-grid grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-          {meals.slice(0, 3).map((m) => (
+          {kitchenPlanMeals.map((m) => (
             <div
               key={m.id}
               onClick={() => onNavigate('meals')}

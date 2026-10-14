@@ -52,6 +52,22 @@ export interface HouseholdMember {
   created_at: string;
 }
 
+export type InvitationStatus = 'pending' | 'accepted' | 'revoked' | 'expired';
+
+export interface HouseholdInvitation {
+  id: string;
+  household_id: string;
+  inviter_id: string;
+  token: string;
+  token_hash: string;
+  role: 'Owner' | 'Member';
+  status: InvitationStatus;
+  expires_at: string;
+  created_at: string;
+  accepted_at?: string;
+  accepted_by?: string;
+}
+
 export interface GroceryList {
   id: string;
   household_id: string;

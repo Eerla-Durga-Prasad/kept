@@ -72,6 +72,15 @@ const formatWeekRange = (days: DayInfo[]): string => {
   }
 };
 
+// Helper to get Monday of the current calendar week based on user's local date
+export const getCurrentWeekMonday = (base: Date = new Date()): Date => {
+  const d = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+  const day = d.getDay(); // 0: Sun, 1: Mon, ..., 6: Sat
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d;
+};
+
 export const Meals: React.FC<MealsProps> = ({
   meals,
   recipes = [],
@@ -80,9 +89,12 @@ export const Meals: React.FC<MealsProps> = ({
   onAddMeal,
   isMobile,
 }) => {
-  // Base week starts at 2026-09-22 matching Kept seed data (Mon Sep 22 – Sun Sep 28)
-  const [weekStartDate, setWeekStartDate] = useState<Date>(() => new Date(2026, 8, 22));
-  const [selectedDayIndex, setSelectedDayIndex] = useState<number>(0);
+  // Dynamically start at the current calendar week's Monday
+  const [weekStartDate, setWeekStartDate] = useState<Date>(() => getCurrentWeekMonday());
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number>(() => {
+    const day = new Date().getDay();
+    return day === 0 ? 6 : day - 1;
+  });
 
   // Modal state
   const [isChooseModalOpen, setIsChooseModalOpen] = useState(false);

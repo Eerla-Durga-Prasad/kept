@@ -22,6 +22,7 @@ import { TopBar } from './components/TopBar';
 import { AddItemSheet } from './components/AddItemSheet';
 import { SyncModal } from './components/SyncModal';
 import { HouseholdModal } from './components/HouseholdModal';
+import { JoinHouseholdView } from './components/JoinHouseholdView';
 
 // Pages
 import { Groceries } from './pages/Groceries';
@@ -33,8 +34,35 @@ import { Settings } from './pages/Settings';
 import { MobileGroceryView } from './pages/MobileGroceryView';
 
 export const App: React.FC = () => {
+  // Helpers to resolve tab and invite tokens from current URL location
+  const getTabFromLocation = (): NavTab => {
+    if (typeof window === 'undefined') return 'groceries';
+    const path = window.location.pathname.toLowerCase().replace(/^\/|\/$/g, '');
+    if (path === 'household') return 'household';
+    if (path === 'home') return 'home';
+    if (path === 'meals') return 'meals';
+    if (path === 'recipes') return 'recipes';
+    if (path === 'settings') return 'settings';
+    return 'groceries';
+  };
+
+  const getInviteTokenFromLocation = (): string | null => {
+    if (typeof window === 'undefined') return null;
+    const searchParams = new URLSearchParams(window.location.search);
+    const tokenParam = searchParams.get('token') || searchParams.get('invite');
+    if (tokenParam !== null) return tokenParam.trim();
+    if (window.location.pathname.startsWith('/join')) {
+      const match = window.location.pathname.match(/\/join\/([^/?#]+)/);
+      if (match && match[1]) {
+        return decodeURIComponent(match[1]).trim();
+      }
+      return ''; // Route /join without specific token
+    }
+    return null;
+  };
+
   // Navigation & View state
-  const [currentTab, setCurrentTab] = useState<NavTab>('groceries');
+  const [currentTab, setCurrentTab] = useState<NavTab>(getTabFromLocation);
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop');
 
   // Modals
@@ -53,6 +81,30 @@ export const App: React.FC = () => {
   // Sync state
   const [syncStatus, setSyncStatus] = useState<SyncEngineStatus>(syncEngine.getStatus());
 
+  // Invitation token detection from URL
+  const [inviteToken, setInviteToken] = useState<string | null>(getInviteTokenFromLocation);
+
+  // URL synchronization
+  const handleSelectTab = (tab: NavTab) => {
+    setCurrentTab(tab);
+    if (typeof window !== 'undefined' && window.history?.pushState) {
+      const targetPath = tab === 'groceries' ? '/' : `/${tab}`;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState(null, '', targetPath);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleUrlChange = () => {
+      setInviteToken(getInviteTokenFromLocation());
+      setCurrentTab(getTabFromLocation());
+    };
+
+    window.addEventListener('popstate', handleUrlChange);
+    return () => window.removeEventListener('popstate', handleUrlChange);
+  }, []);
+
   // Load data from Dexie
   const refreshAllData = useCallback(async () => {
     const [loadedItems, loadedMembers, loadedRecipes, loadedMeals] = await Promise.all([
@@ -67,10 +119,20 @@ export const App: React.FC = () => {
     setRecipes(loadedRecipes);
     setMeals(loadedMeals);
 
-    if (!currentMember && loadedMembers.length > 0) {
-      const durga = loadedMembers.find((m) => m.name === 'Durga Prasad') || loadedMembers[0];
-      setCurrentMember(durga);
-      syncEngine.setCurrentUserId(durga.user_id);
+    if (loadedMembers.length > 0) {
+      const activeUserId = syncEngine.getCurrentUserId();
+      const authenticatedMember =
+        (currentMember && loadedMembers.some((m) => m.id === currentMember.id && (m.role === 'Owner' || m.user_id === activeUserId))
+          ? loadedMembers.find((m) => m.id === currentMember.id)!
+          : null) ||
+        loadedMembers.find((m) => m.role === 'Owner') ||
+        loadedMembers.find((m) => m.user_id === activeUserId) ||
+        loadedMembers[0];
+
+      if (!currentMember || currentMember.id !== authenticatedMember.id) {
+        setCurrentMember(authenticatedMember);
+        syncEngine.setCurrentUserId(authenticatedMember.user_id);
+      }
     }
   }, [currentMember]);
 
@@ -298,7 +360,50 @@ export const App: React.FC = () => {
     setIsHouseholdModalOpen(false);
   };
 
+  // Household Member Update (Offline-First via Dexie + Outbox)
+  const handleUpdateHouseholdMember = async (updated: HouseholdMember) => {
+    const clientId = syncEngine.getClientId();
+    await db.transaction('rw', db.household_members, db.outbox_operations, async () => {
+      await db.household_members.put(updated);
+      await enqueueOutboxOperation(
+        'household_members',
+        updated.id,
+        'UPDATE',
+        { ...updated },
+        clientId
+      );
+    });
+
+    setMembers((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+    if (currentMember?.id === updated.id) {
+      setCurrentMember(updated);
+    }
+  };
+
   const activeGroceryCount = items.filter((i) => !i.deleted_at && !i.checked).length;
+
+  if (inviteToken !== null) {
+    return (
+      <JoinHouseholdView
+        token={inviteToken}
+        onJoinSuccess={async () => {
+          await refreshAllData();
+          if (typeof window !== 'undefined' && window.history?.replaceState) {
+            window.history.replaceState({}, '', '/household');
+          }
+          setInviteToken(null);
+          setCurrentTab('household');
+        }}
+        onCancel={() => {
+          if (typeof window !== 'undefined' && window.history?.replaceState) {
+            window.history.replaceState({}, '', '/household');
+          }
+          setInviteToken(null);
+          setCurrentTab('household');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-cream-100 flex flex-col font-sans text-ink-900">
@@ -328,7 +433,7 @@ export const App: React.FC = () => {
               {currentTab === 'groceries' ? (
                 <MobileGroceryView
                   items={items}
-                  onBack={() => setCurrentTab('home')}
+                  onBack={() => handleSelectTab('home')}
                   onToggleCheck={handleToggleCheck}
                   onUpdateQuantity={handleUpdateQuantity}
                   onDeleteItem={handleDeleteItem}
@@ -344,7 +449,7 @@ export const App: React.FC = () => {
                   currentMember={currentMember || members[0] || { id: 'm_dp', name: 'Durga Prasad', initials: 'DP', role: 'Owner', user_id: 'durga_prasad', household_id: 'h1', created_at: '' }}
                   items={items}
                   meals={meals}
-                  onNavigate={setCurrentTab}
+                  onNavigate={handleSelectTab}
                   onOpenSyncModal={() => setIsSyncModalOpen(true)}
                 />
               ) : currentTab === 'meals' ? (
@@ -370,7 +475,9 @@ export const App: React.FC = () => {
                 <div className="pb-24">
                   <Household
                     members={members}
+                    currentMember={currentMember || members[0]}
                     onOpenInviteModal={() => setIsHouseholdModalOpen(true)}
+                    onUpdateMember={handleUpdateHouseholdMember}
                   />
                 </div>
               ) : (
@@ -388,7 +495,7 @@ export const App: React.FC = () => {
             {/* Mobile bottom navigation (No desktop sidebar on mobile) */}
             <MobileNav
               currentTab={currentTab}
-              onSelectTab={setCurrentTab}
+              onSelectTab={handleSelectTab}
               groceryBadgeCount={activeGroceryCount}
             />
           </div>
@@ -399,7 +506,7 @@ export const App: React.FC = () => {
           {/* Left Desktop Sidebar */}
           <Sidebar
             currentTab={currentTab}
-            onSelectTab={setCurrentTab}
+            onSelectTab={handleSelectTab}
             members={members}
             onInviteMember={() => setIsHouseholdModalOpen(true)}
             onOpenSyncModal={() => setIsSyncModalOpen(true)}
@@ -428,7 +535,7 @@ export const App: React.FC = () => {
                 currentMember={currentMember || members[0] || { id: 'm_dp', name: 'Durga Prasad', initials: 'DP', role: 'Owner', user_id: 'durga_prasad', household_id: 'h1', created_at: '' }}
                 items={items}
                 meals={meals}
-                onNavigate={setCurrentTab}
+                onNavigate={handleSelectTab}
                 onOpenSyncModal={() => setIsSyncModalOpen(true)}
               />
             )}
@@ -446,6 +553,7 @@ export const App: React.FC = () => {
             {currentTab === 'recipes' && (
               <Recipes
                 recipes={recipes}
+                items={items}
                 onAddIngredientToList={handleAddIngredientToList}
                 onAddAllIngredientsToList={handleAddAllIngredientsToList}
               />
@@ -454,7 +562,9 @@ export const App: React.FC = () => {
             {currentTab === 'household' && (
               <Household
                 members={members}
+                currentMember={currentMember || members[0]}
                 onOpenInviteModal={() => setIsHouseholdModalOpen(true)}
+                onUpdateMember={handleUpdateHouseholdMember}
               />
             )}
 
@@ -471,7 +581,7 @@ export const App: React.FC = () => {
           {/* Mobile bottom nav on small viewports when in desktop layout mode */}
           <MobileNav
             currentTab={currentTab}
-            onSelectTab={setCurrentTab}
+            onSelectTab={handleSelectTab}
             groceryBadgeCount={activeGroceryCount}
           />
         </div>

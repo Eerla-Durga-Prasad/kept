@@ -60,7 +60,15 @@ export function normalizeMealQuery(raw: string): {
     .replace(/\bparota\b/g, 'paratha')
     .replace(/\bporotta\b/g, 'paratha')
     .replace(/\bpulav\b/g, 'pulao')
-    .replace(/\bpilaf\b/g, 'pulao')
+    .replace(/\bmasla\b/g, 'masala')
+    .replace(/\bchiken\b/g, 'chicken')
+    .replace(/\bidly\b/g, 'idli')
+    .replace(/\bgulabjamun\b/g, 'gulab jamun')
+    .replace(/\bpulihara\b/g, 'pulihora')
+    .replace(/\bpunukulu\b/g, 'punugulu')
+    .replace(/\buthappam\b/g, 'uttapam')
+    .replace(/\bcharu\b/g, 'rasam')
+    .replace(/\bsaaru\b/g, 'rasam')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -141,8 +149,13 @@ interface FoodCatalogEntry {
 const CURATED_FOOD_CATALOG: FoodCatalogEntry[] = [
   {
     canonical: 'mysore bonda',
-    aliases: ['mysore bonda', 'mysor bonda', 'bonda', 'mysore bajji', 'goli baje', 'punugulu'],
-    image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80&dish=mysore-bonda',
+    aliases: ['mysore bonda', 'mysor bonda', 'bonda', 'mysore bajji', 'goli baje', 'mangalore bajji'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Bajji_with_coconut_chutney.jpg/800px-Bajji_with_coconut_chutney.jpg?dish=mysore-bonda',
+  },
+  {
+    canonical: 'punugulu',
+    aliases: ['punugulu', 'punukulu', 'punugulu snack', 'andhra punugulu'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Punugulu1.JPG/800px-Punugulu1.JPG?dish=punugulu',
   },
   {
     canonical: 'chicken 65',
@@ -182,7 +195,7 @@ const CURATED_FOOD_CATALOG: FoodCatalogEntry[] = [
   {
     canonical: 'pesarattu',
     aliases: ['pesarattu', 'pesara dosa', 'moong dal dosa', 'pesarattu upma'],
-    image: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=600&q=80&dish=pesarattu-dosa',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Pesarattu.jpg/800px-Pesarattu.jpg?dish=pesarattu',
   },
   {
     canonical: 'poha',
@@ -211,13 +224,13 @@ const CURATED_FOOD_CATALOG: FoodCatalogEntry[] = [
   },
   {
     canonical: 'idli & chutney',
-    aliases: ['idli', 'idly', 'idli sambar', 'idli chutney', 'idli & chutney'],
-    image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=80',
+    aliases: ['idli', 'idly', 'idli sambar', 'idli chutney', 'idli & chutney', 'steamed idli', 'rava idli'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Idli_Sambar.JPG/800px-Idli_Sambar.JPG?dish=idli',
   },
   {
     canonical: 'upma',
     aliases: ['upma', 'rava upma', 'uppittu', 'sooji upma'],
-    image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/A_photo_of_Upma.jpg/800px-A_photo_of_Upma.jpg?dish=upma',
   },
   {
     canonical: 'pancakes',
@@ -250,14 +263,29 @@ const CURATED_FOOD_CATALOG: FoodCatalogEntry[] = [
     image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80',
   },
   {
+    canonical: 'palak paneer',
+    aliases: ['palak paneer', 'palak panner', 'spinach paneer', 'saag paneer'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Palakpaneer_Rayagada_Odisha_0009.jpg/800px-Palakpaneer_Rayagada_Odisha_0009.jpg?dish=palak-paneer',
+  },
+  {
     canonical: 'paneer curry',
-    aliases: ['paneer curry', 'kadai paneer', 'palak paneer', 'matar paneer', 'paneer masala'],
+    aliases: ['paneer curry', 'kadai paneer', 'matar paneer', 'paneer masala'],
     image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?auto=format&fit=crop&w=600&q=80',
   },
   {
     canonical: 'dal rice',
     aliases: ['dal rice', 'dal tadka', 'dal fry', 'sambar rice', 'dal'],
     image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80',
+  },
+  {
+    canonical: 'rasam',
+    aliases: ['rasam', 'charu', 'tomato rasam', 'pepper rasam', 'saaru'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Rasam.JPG/800px-Rasam.JPG?dish=rasam',
+  },
+  {
+    canonical: 'uttapam',
+    aliases: ['uttapam', 'uthappam', 'onion uttapam', 'tomato uttapam'],
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c6/Mini_Uttappam.jpg/800px-Mini_Uttappam.jpg?dish=uttapam',
   },
   {
     canonical: 'chicken curry',
@@ -267,7 +295,7 @@ const CURATED_FOOD_CATALOG: FoodCatalogEntry[] = [
   {
     canonical: 'chapati',
     aliases: ['chapati', 'roti', 'phulka', 'paratha', 'roti & curry', 'naan', 'butter naan'],
-    image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Annapurna_Naan.jpg/800px-Annapurna_Naan.jpg?dish=roti-naan',
   },
   {
     canonical: 'veg soup',
@@ -277,7 +305,7 @@ const CURATED_FOOD_CATALOG: FoodCatalogEntry[] = [
   {
     canonical: 'chole bhature',
     aliases: ['chole bhature', 'chana bhatura', 'chole puri'],
-    image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80&dish=chole-bhature',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Chole_Bhature_from_Nagpur.JPG/800px-Chole_Bhature_from_Nagpur.JPG?dish=chole-bhature',
   },
   {
     canonical: 'pav bhaji',
@@ -308,6 +336,16 @@ const CURATED_FOOD_CATALOG: FoodCatalogEntry[] = [
     canonical: 'salad',
     aliases: ['salad', 'green salad', 'caesar salad', 'greek salad'],
     image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80&dish=salad',
+  },
+  {
+    canonical: 'pulihora',
+    aliases: ['pulihora', 'puliyogare', 'tamarind rice', 'chintapandu pulihora', 'chitranna tamarind'],
+    image: 'https://images.unsplash.com/photo-1633964913295-ceb43826e7c9?auto=format&fit=crop&w=600&q=80&dish=pulihora-tamarind-rice',
+  },
+  {
+    canonical: 'gulab jamun',
+    aliases: ['gulab jamun', 'gulabjamun', 'kala jamun', 'gulab jamoon', 'jamun sweet'],
+    image: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=600&q=80&dish=gulab-jamun',
   },
 ];
 

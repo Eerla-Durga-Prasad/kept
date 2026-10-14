@@ -149,11 +149,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-botanical-500 border border-white" />
                 </div>
                 <span className="text-xs text-ink-800 font-normal truncate">
-                  {member.name === 'Durga Prasad' ? 'You' : member.name}
+                  {member.name}
                 </span>
               </div>
               <span className="text-[10px] text-ink-400 font-mono">
-                {member.role === 'Owner' ? 'Admin' : ''}
+                {member.role === 'Owner' ? 'Owner' : ''}
               </span>
             </div>
           ))}

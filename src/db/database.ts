@@ -7,11 +7,13 @@ import {
   Recipe,
   Meal,
   OutboxOperation,
+  HouseholdInvitation,
 } from '../sync/types';
 
 export class KeptDatabase extends Dexie {
   households!: Table<Household, string>;
   household_members!: Table<HouseholdMember, string>;
+  household_invitations!: Table<HouseholdInvitation, string>;
   lists!: Table<GroceryList, string>;
   items!: Table<Item, string>;
   recipes!: Table<Recipe, string>;
@@ -28,6 +30,15 @@ export class KeptDatabase extends Dexie {
       recipes: 'id, household_id, category',
       meals: 'id, household_id, week_start, day_of_week, meal_type',
       outbox_operations: 'id, entity_type, entity_id, status, created_at',
+    });
+
+    this.version(2).stores({
+      household_invitations: 'id, household_id, token, token_hash, status, expires_at',
+    });
+
+    this.on('versionchange', () => {
+      this.close();
+      return false;
     });
   }
 }
