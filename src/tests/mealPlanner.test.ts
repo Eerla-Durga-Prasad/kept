@@ -273,7 +273,7 @@ describe('Meal Planner Date-Based Architecture & Data Isolation Tests', () => {
     const idliDef = getMealDefinition('Idli & Chutney');
     expect(idliDef).toBeDefined();
     expect(idliDef?.name).toBe('Idli & Chutney');
-    expect(idliDef?.image).toContain('photo-1589301760014');
+    expect(idliDef?.image).toContain('Idli_Sambar');
     // Ensure image is NOT dosa or oats image
     expect(idliDef?.image).not.toBe(dosaDef?.image);
     expect(idliDef?.image).not.toBe(oatsDef?.image);
@@ -290,7 +290,7 @@ describe('Meal Planner Date-Based Architecture & Data Isolation Tests', () => {
 
     // 2. Existing Idli & Chutney -> Idli image
     const idli = getMealDefinition('Idli & Chutney');
-    expect(idli?.image).toContain('photo-1589301760014');
+    expect(idli?.image).toContain('Idli_Sambar');
 
     // 3. Create custom "wada and chatni" -> Wada/Chutney image
     const wadaImg = await resolveFoodImage('wada and chatni');

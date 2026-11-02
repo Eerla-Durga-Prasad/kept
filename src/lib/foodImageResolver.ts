@@ -183,6 +183,11 @@ const CURATED_FOOD_CATALOG: FoodCatalogEntry[] = [
     image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80&dish=veg-biryani',
   },
   {
+    canonical: 'hyderabadi dum biryani',
+    aliases: ['hyderabadi dum biryani', 'hyderabadi veg dum biryani', 'dum biryani', 'hyderabadi biryani', 'hyderabadi vegetable biryani'],
+    image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80&dish=hyderabadi-dum-biryani',
+  },
+  {
     canonical: 'fried rice',
     aliases: ['fried rice', 'veg fried rice', 'vegetable fried rice', 'egg fried rice', 'schezwan fried rice'],
     image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=600&q=80&dish=fried-rice',

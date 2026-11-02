@@ -6,6 +6,11 @@ const inMemoryInvitations: HouseholdInvitation[] = [];
 const inMemoryMembers: HouseholdMember[] = [];
 const inMemoryHouseholds: Household[] = [];
 
+vi.mock('../lib/supabase', () => ({
+  isSupabaseConfigured: false,
+  supabase: null,
+}));
+
 vi.mock('../db/database', () => {
   return {
     db: {

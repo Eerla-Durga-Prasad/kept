@@ -117,7 +117,13 @@ describe('Custom Meal Image Matching & Normalization Tests', () => {
     expect(cached?.toLowerCase()).toContain('mysore-bonda');
   });
 
-  it('15. Single source of truth: getMealDefinition preserves the custom meal image', () => {
+  it('15. Catalog aliases resolve Idli, Rava Upma, and Hyderabadi Dum Biryani to the correct dishes', () => {
+    expect(getMealDefinition('Idli')?.name).toBe('Idli & Chutney');
+    expect(getMealDefinition('Rava Upma')?.name).toBe('Upma');
+    expect(getMealDefinition('Hyderabadi Dum Biryani')?.name).toBe('Veg Biryani');
+  });
+
+  it('16. Single source of truth: getMealDefinition preserves the custom meal image', () => {
     const customSlot = {
       id: 'm_test_999',
       title: 'Mysore Bonda',

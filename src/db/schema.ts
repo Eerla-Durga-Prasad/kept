@@ -119,6 +119,7 @@ CREATE POLICY "Household members can insert/update items"
   );
 
 -- Household Invitations RLS Policies
+DROP POLICY IF EXISTS "Household members can view invitations" ON household_invitations;
 CREATE POLICY "Household members can view invitations"
   ON household_invitations FOR SELECT
   USING (
@@ -127,6 +128,7 @@ CREATE POLICY "Household members can view invitations"
     )
   );
 
+DROP POLICY IF EXISTS "Household owners can insert invitations" ON household_invitations;
 CREATE POLICY "Household owners can insert invitations"
   ON household_invitations FOR INSERT
   WITH CHECK (
@@ -135,6 +137,7 @@ CREATE POLICY "Household owners can insert invitations"
     )
   );
 
+DROP POLICY IF EXISTS "Household owners can update invitations" ON household_invitations;
 CREATE POLICY "Household owners can update invitations"
   ON household_invitations FOR UPDATE
   USING (

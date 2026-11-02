@@ -245,7 +245,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
   const isVeg = recipe.diet === 'Vegetarian' || recipe.diet === 'Vegan';
 
   return (
-    <div className="max-w-4xl mx-auto pb-16 animate-fadeIn px-0 sm:px-2">
+    <div className="w-full max-w-4xl mx-auto pb-16 sm:pb-20 animate-fadeIn px-0 min-w-0 box-border">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-20 md:bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-50 bg-ink-900 text-cream-50 px-4 py-3 rounded-xl shadow-float text-xs font-medium flex items-center gap-2 border border-borderWarm animate-fadeIn">
@@ -260,7 +260,7 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
           <button
             type="button"
             onClick={onBack}
-            className="inline-flex items-center gap-2 text-xs font-medium text-ink-600 hover:text-ink-900 transition-colors py-2 px-1 cursor-pointer min-h-[40px]"
+            className="inline-flex items-center gap-2 text-xs font-medium text-ink-600 hover:text-ink-900 transition-colors py-2 px-2 -ml-1 cursor-pointer min-h-[40px] rounded-lg hover:bg-cream-200/60 active:bg-cream-200 touch-manipulation"
           >
             <ArrowLeft className="w-4 h-4 text-terracotta-500 shrink-0" />
             <span>Back to recipes</span>
@@ -269,19 +269,19 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
       )}
 
       {/* Large food photograph at top */}
-      <div className="relative w-full h-64 sm:h-80 md:h-96 rounded-2xl overflow-hidden border border-borderWarm shadow-card mb-6 sm:mb-8 bg-cream-100">
+      <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] md:h-96 min-h-[220px] rounded-2xl overflow-hidden border border-borderWarm shadow-card mb-5 sm:mb-8 bg-cream-100">
         <img
           src={imgSrc}
           alt={recipe.title}
           onError={handleImageError}
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink-900/90 via-ink-900/35 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink-900/95 via-ink-900/40 to-black/20 pointer-events-none" />
 
-        <div className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 flex items-center gap-2">
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 flex items-center gap-2 z-10">
           {recipe.diet && (
             <span
-              className={`px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-md shadow-subtle border ${
+              className={`px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold backdrop-blur-md shadow-subtle border ${
                 isVeg
                   ? 'bg-botanical-50/95 text-botanical-700 border-botanical-200'
                   : 'bg-red-50/95 text-red-700 border-red-200'
@@ -292,29 +292,29 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
           )}
         </div>
 
-        <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 text-white">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] sm:text-xs uppercase tracking-widest font-semibold text-terracotta-300">
+        <div className="absolute bottom-3.5 left-3.5 right-3.5 sm:bottom-6 sm:left-6 sm:right-6 text-white z-10">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1">
+            <span className="text-[10px] sm:text-xs uppercase tracking-widest font-semibold text-terracotta-300">
               {recipe.category}
             </span>
             {recipe.cuisine && (
               <>
-                <span className="text-white/40">•</span>
-                <span className="text-[11px] sm:text-xs font-medium text-cream-200">{recipe.cuisine}</span>
+                <span className="text-white/40 text-xs">•</span>
+                <span className="text-[10px] sm:text-xs font-medium text-cream-200">{recipe.cuisine}</span>
               </>
             )}
           </div>
-          <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-medium tracking-tight mt-1 drop-shadow-md leading-tight">
+          <h1 className="font-serif text-xl sm:text-3xl md:text-4xl font-medium tracking-tight drop-shadow-md leading-tight text-balance">
             {recipe.title}
           </h1>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-        {/* Main Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Metadata badges: 2-col on mobile, flex row on sm+ */}
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5 sm:gap-6 py-3 px-3.5 sm:px-4 border-y border-borderWarm text-xs text-ink-700 bg-white/70 rounded-xl">
+      {/* Main Responsive Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 items-start w-full min-w-0">
+        {/* 1. Recipe Metadata Badges: spans col 1-2 on desktop, stacks first on mobile */}
+        <div className="w-full min-w-0 lg:col-span-2 lg:col-start-1 lg:row-start-1">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2.5 sm:gap-6 py-2.5 sm:py-3 px-3 sm:px-4 border-y border-borderWarm text-xs text-ink-700 bg-white/70 rounded-xl w-full box-border">
             <div className="flex items-center gap-2 min-w-0">
               <Clock className="w-4 h-4 text-terracotta-500 shrink-0" />
               <span className="truncate">Prep: {recipe.prep_time}</span>
@@ -334,46 +334,14 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
               <span className="truncate">{recipe.difficulty}</span>
             </div>
           </div>
-
-          {/* Description */}
-          <div>
-            <h3 className="font-serif text-xl font-medium text-ink-900 mb-2">
-              About this recipe
-            </h3>
-            <p className="text-sm text-ink-600 leading-relaxed font-normal">
-              {recipe.description}
-            </p>
-          </div>
-
-          {/* Cooking Instructions */}
-          {recipe.instructions && recipe.instructions.length > 0 && (
-            <div className="pt-2">
-              <h3 className="font-serif text-xl font-medium text-ink-900 mb-4">
-                Method
-              </h3>
-              <ol className="space-y-4">
-                {recipe.instructions.map((step, idx) => (
-                  <li
-                    key={idx}
-                    className="flex gap-4 text-sm text-ink-700 leading-relaxed bg-white p-4 rounded-xl border border-borderWarm"
-                  >
-                    <span className="w-7 h-7 rounded-full bg-cream-200 border border-borderWarm text-ink-800 font-serif text-xs font-semibold flex items-center justify-center shrink-0 mt-0.5">
-                      {idx + 1}
-                    </span>
-                    <span className="flex-1 pt-0.5">{step}</span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
         </div>
 
-        {/* Right Ingredients Column */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-borderWarm p-4 sm:p-6 shadow-card space-y-4">
-            <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-3 pb-3 border-b border-borderWarm-subtle">
-              <div>
-                <h3 className="font-serif text-lg sm:text-xl font-medium text-ink-900">
+        {/* 2. Ingredients Card: stacked below recipe info on mobile, right column on desktop */}
+        <div className="w-full min-w-0 lg:col-span-1 lg:col-start-3 lg:row-start-1 lg:row-span-3">
+          <div className="bg-white rounded-2xl border border-borderWarm p-3.5 sm:p-6 shadow-card space-y-4 w-full box-border">
+            <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 pb-3 border-b border-borderWarm-subtle">
+              <div className="min-w-0">
+                <h3 className="font-serif text-lg sm:text-xl font-medium text-ink-900 leading-tight">
                   Ingredients
                 </h3>
                 <span className="text-xs text-ink-400">
@@ -382,25 +350,27 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
               </div>
 
               {/* Servings scaler */}
-              <div className="flex items-center gap-1.5 bg-cream-100 px-2 py-1 rounded-xl border border-borderWarm shrink-0">
+              <div className="flex items-center gap-1 bg-cream-100 px-1.5 py-1 rounded-xl border border-borderWarm shrink-0">
                 <button
                   type="button"
                   onClick={() => setCurrentServings((s) => Math.max(1, s - 1))}
                   disabled={currentServings <= 1}
-                  className="p-1.5 text-ink-600 hover:text-ink-900 disabled:opacity-30 cursor-pointer min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg hover:bg-cream-200 transition-colors"
+                  className="p-1 text-ink-600 hover:text-ink-900 disabled:opacity-30 cursor-pointer min-w-[30px] min-h-[30px] flex items-center justify-center rounded-lg hover:bg-cream-200 transition-colors touch-manipulation"
                   title="Decrease servings"
+                  aria-label="Decrease servings"
                 >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-xs font-semibold text-ink-800 min-w-[54px] text-center">
+                <span className="text-xs font-semibold text-ink-800 min-w-[50px] text-center select-none">
                   {currentServings} servings
                 </span>
                 <button
                   type="button"
                   onClick={() => setCurrentServings((s) => Math.min(16, s + 1))}
                   disabled={currentServings >= 16}
-                  className="p-1.5 text-ink-600 hover:text-ink-900 disabled:opacity-30 cursor-pointer min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg hover:bg-cream-200 transition-colors"
+                  className="p-1 text-ink-600 hover:text-ink-900 disabled:opacity-30 cursor-pointer min-w-[30px] min-h-[30px] flex items-center justify-center rounded-lg hover:bg-cream-200 transition-colors touch-manipulation"
                   title="Increase servings"
+                  aria-label="Increase servings"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
@@ -418,21 +388,22 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                 );
 
                 return (
-                  <div key={idx} className="py-2.5 sm:py-3 flex items-center justify-between gap-2.5 group">
+                  <div key={idx} className="py-2.5 sm:py-3 flex items-center justify-between gap-2 group min-w-0">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <button
                         type="button"
                         onClick={(e) => toggleCheck(idx, e)}
-                        className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors cursor-pointer ${
+                        className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors cursor-pointer touch-manipulation ${
                           isChecked
                             ? 'bg-botanical-600 border-botanical-600 text-white'
                             : 'border-borderWarm-dark hover:border-botanical-500'
                         }`}
                         title={isChecked ? 'Mark unneeded' : 'Mark needed'}
+                        aria-label={isChecked ? `Uncheck ${ing.name}` : `Check ${ing.name}`}
                       >
                         {isChecked && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
                       </button>
-                      <div className="min-w-0 leading-tight">
+                      <div className="min-w-0 leading-tight flex-1">
                         <span
                           className={`text-xs sm:text-sm font-medium ${
                             isChecked ? 'line-through text-ink-400' : 'text-ink-900'
@@ -440,11 +411,11 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                         >
                           {ing.name}
                         </span>
-                        <span className="text-xs text-ink-500 ml-1.5 font-normal">
+                        <span className="text-xs text-ink-500 ml-1.5 font-normal whitespace-nowrap">
                           — {scaledQty}
                         </span>
                         {isAlreadyInList && (
-                          <span className="inline-block mt-0.5 sm:mt-0 sm:ml-2 text-[10px] text-botanical-700 bg-botanical-50 px-1.5 py-0.5 rounded font-medium border border-botanical-200">
+                          <span className="inline-block mt-0.5 sm:mt-0 sm:ml-2 text-[10px] text-botanical-700 bg-botanical-50 px-1.5 py-0.5 rounded font-medium border border-botanical-200 whitespace-nowrap">
                             in pantry
                           </span>
                         )}
@@ -455,16 +426,17 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
                       type="button"
                       onClick={() => handleAddSingle(ing, idx)}
                       title="Add to grocery list"
-                      className="text-xs px-2.5 py-1.5 rounded-lg text-ink-600 hover:text-terracotta-600 hover:bg-terracotta-50 flex items-center gap-1 transition-colors cursor-pointer shrink-0 min-h-[36px]"
+                      aria-label={`Add ${ing.name} to grocery list`}
+                      className="text-xs px-2.5 py-1.5 rounded-lg text-ink-600 hover:text-terracotta-600 hover:bg-terracotta-50 flex items-center gap-1 transition-colors cursor-pointer shrink-0 min-h-[36px] touch-manipulation"
                     >
                       {isAdded ? (
                         <>
-                          <Check className="w-3.5 h-3.5 text-botanical-600" />
+                          <Check className="w-3.5 h-3.5 text-botanical-600 shrink-0" />
                           <span className="text-[11px] font-medium text-botanical-600">Added</span>
                         </>
                       ) : (
                         <>
-                          <Plus className="w-3.5 h-3.5" />
+                          <Plus className="w-3.5 h-3.5 shrink-0" />
                           <span className="text-[11px] font-medium">Add</span>
                         </>
                       )}
@@ -474,27 +446,64 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({
               })}
             </div>
 
-            {/* Bottom action: Add all to grocery list */}
+            {/* Bottom action: Add all ingredients to grocery list */}
             <div className="pt-2">
               <button
                 type="button"
                 onClick={handleAddAll}
-                className="w-full min-h-[44px] py-3 px-4 bg-terracotta-500 hover:bg-terracotta-600 active:bg-terracotta-700 text-white text-xs sm:text-sm font-medium rounded-xl shadow-subtle flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full min-h-[44px] py-3 px-3.5 sm:px-4 bg-terracotta-500 hover:bg-terracotta-600 active:bg-terracotta-700 text-white text-xs sm:text-sm font-medium rounded-xl shadow-subtle flex items-center justify-center gap-2 transition-all cursor-pointer touch-manipulation text-center"
               >
                 {allAdded ? (
                   <>
-                    <Check className="w-4 h-4 text-white" />
-                    <span>Added to Grocery List!</span>
+                    <Check className="w-4 h-4 text-white shrink-0" />
+                    <span className="leading-snug">Added to Grocery List!</span>
                   </>
                 ) : (
                   <>
-                    <ShoppingBag className="w-4 h-4" />
-                    <span>Add all to grocery list</span>
+                    <ShoppingBag className="w-4 h-4 shrink-0" />
+                    <span className="leading-snug">Add all ingredients to grocery list</span>
                   </>
                 )}
               </button>
             </div>
           </div>
+        </div>
+
+        {/* 3. About & Method Sections: col 1-2 row 2 on desktop, stacked below ingredients on mobile */}
+        <div className="w-full min-w-0 lg:col-span-2 lg:col-start-1 lg:row-start-2 space-y-6">
+          {/* Description */}
+          <div className="bg-white/60 p-4 sm:p-5 rounded-2xl border border-borderWarm/80 space-y-2">
+            <h3 className="font-serif text-lg sm:text-xl font-medium text-ink-900">
+              About this recipe
+            </h3>
+            <p className="text-xs sm:text-sm text-ink-600 leading-relaxed font-normal">
+              {recipe.description}
+            </p>
+          </div>
+
+          {/* Cooking Instructions */}
+          {recipe.instructions && recipe.instructions.length > 0 && (
+            <div className="space-y-3.5 sm:space-y-4">
+              <h3 className="font-serif text-lg sm:text-xl font-medium text-ink-900">
+                Method
+              </h3>
+              <ol className="space-y-3 sm:space-y-4">
+                {recipe.instructions.map((step, idx) => (
+                  <li
+                    key={idx}
+                    className="flex gap-3 sm:gap-4 text-xs sm:text-sm text-ink-700 leading-relaxed bg-white p-3.5 sm:p-4 rounded-xl border border-borderWarm shadow-subtle min-w-0 w-full box-border"
+                  >
+                    <span className="w-7 h-7 rounded-full bg-cream-200 border border-borderWarm text-ink-800 font-serif text-xs font-semibold flex items-center justify-center shrink-0 mt-0.5">
+                      {idx + 1}
+                    </span>
+                    <span className="flex-1 min-w-0 pt-0.5 break-words leading-relaxed text-ink-800">
+                      {step}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
         </div>
       </div>
     </div>

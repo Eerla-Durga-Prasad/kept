@@ -14,6 +14,11 @@ import { syncEngine, SyncEngineStatus } from './sync/syncEngine';
 import { realtimeCoordinator } from './sync/realtime';
 import { initializeDatabaseSeed } from './lib/seedData';
 import { enqueueOutboxOperation, generateUUID } from './sync/outbox';
+import { applyLocalItemUpdate } from './sync/conflictResolver';
+import { detectGroceryCategory } from './lib/groceryCategorizer';
+import { AuthFlow } from './components/AuthFlow';
+import { KeptAuthUser, getStoredProfile, saveProfileForUser, signOutCurrentUser } from './lib/auth';
+import { isSupabaseConfigured, supabase } from './lib/supabase';
 
 // Components
 import { Sidebar, NavTab } from './components/Sidebar';
@@ -78,11 +83,27 @@ export const App: React.FC = () => {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [currentMember, setCurrentMember] = useState<HouseholdMember | null>(null);
 
+  // Auth state
+  const [authUser, setAuthUser] = useState<KeptAuthUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
   // Sync state
   const [syncStatus, setSyncStatus] = useState<SyncEngineStatus>(syncEngine.getStatus());
 
   // Invitation token detection from URL
   const [inviteToken, setInviteToken] = useState<string | null>(getInviteTokenFromLocation);
+
+  const handleSignOut = useCallback(async () => {
+    setAuthUser(null);
+    syncEngine.setCurrentUserId('durga_prasad');
+    if (supabase) {
+      try {
+        await signOutCurrentUser();
+      } catch {
+        // Ignore sign-out failures; local data stays intact.
+      }
+    }
+  }, []);
 
   // URL synchronization
   const handleSelectTab = (tab: NavTab) => {
@@ -103,6 +124,70 @@ export const App: React.FC = () => {
 
     window.addEventListener('popstate', handleUrlChange);
     return () => window.removeEventListener('popstate', handleUrlChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) {
+      setAuthReady(true);
+      return;
+    }
+
+    const supabaseClient = supabase;
+    let isMounted = true;
+
+    const hydrateSession = async () => {
+      try {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        if (error) throw error;
+
+        if (session?.user) {
+          const user: KeptAuthUser = {
+            id: session.user.id,
+            email: session.user.email,
+            phone: session.user.phone,
+            full_name: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? null,
+            avatar_url: session.user.user_metadata?.avatar_url ?? null,
+          };
+
+          if (isMounted) {
+            setAuthUser(user);
+            syncEngine.setCurrentUserId(user.id);
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setAuthUser(null);
+        }
+      } finally {
+        if (isMounted) {
+          setAuthReady(true);
+        }
+      }
+    };
+
+    hydrateSession();
+    const { data: authListener } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+      if (!isMounted) return;
+      if (session?.user) {
+        const user: KeptAuthUser = {
+          id: session.user.id,
+          email: session.user.email,
+          phone: session.user.phone,
+          full_name: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? null,
+          avatar_url: session.user.user_metadata?.avatar_url ?? null,
+        };
+        setAuthUser(user);
+        syncEngine.setCurrentUserId(user.id);
+        return;
+      }
+
+      setAuthUser(null);
+    });
+
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   // Load data from Dexie
@@ -135,6 +220,25 @@ export const App: React.FC = () => {
       }
     }
   }, [currentMember]);
+
+  const handleAuthenticated = useCallback(async (user: KeptAuthUser) => {
+    setAuthUser(user);
+    const profile = getStoredProfile(user.id) ?? {};
+    saveProfileForUser(user.id, {
+      full_name: user.full_name || profile.full_name,
+      avatar_url: user.avatar_url || profile.avatar_url,
+    });
+    syncEngine.setCurrentUserId(user.id);
+
+    const matchingMember = members.find((member) => member.user_id === user.id)
+      || members.find((member) => member.name.toLowerCase() === (user.full_name || '').toLowerCase());
+
+    if (matchingMember) {
+      setCurrentMember(matchingMember);
+    }
+
+    await refreshAllData();
+  }, [members, refreshAllData]);
 
   // Initial load & listeners
   useEffect(() => {
@@ -190,9 +294,17 @@ export const App: React.FC = () => {
     quantity: string;
     category: CategoryType;
     addToMealPlan: boolean;
+    household_id?: string;
+    assigned_to_user_id?: string;
   }) => {
+    const householdId =
+      newItem.household_id ||
+      currentMember?.household_id ||
+      members[0]?.household_id ||
+      'h_default_household_01';
+
     const created = await syncEngine.createItem({
-      household_id: 'h_default_household_01',
+      household_id: householdId,
       list_id: 'l_main_kitchen_list_01',
       name: newItem.name,
       quantity: newItem.quantity,
@@ -205,22 +317,83 @@ export const App: React.FC = () => {
     realtimeCoordinator.broadcastItemUpdate(created);
   };
 
+  const handleRemoveAllItems = async () => {
+    const activeHouseholdId =
+      currentMember?.household_id || members[0]?.household_id || 'h_default_household_01';
+
+    // Only target active grocery items belonging to the currently selected household list
+    const itemsToRemove = items.filter(
+      (item) =>
+        !item.deleted_at &&
+        (!item.household_id || item.household_id === activeHouseholdId)
+    );
+
+    if (itemsToRemove.length === 0) return;
+
+    const now = new Date().toISOString();
+    const currentUserId = syncEngine.getCurrentUserId();
+    const clientId = syncEngine.getClientId();
+    const isOnline = syncEngine.isEffectivelyOnline();
+
+    const updatedItems: Item[] = [];
+
+    await db.transaction('rw', db.items, db.outbox_operations, async () => {
+      for (const item of itemsToRemove) {
+        const updated = applyLocalItemUpdate(item, { deleted_at: now }, currentUserId);
+        updated.sync_status = isOnline ? 'pending' : 'offline';
+        await db.items.put(updated);
+        await enqueueOutboxOperation(
+          'items',
+          updated.id,
+          'UPDATE',
+          {
+            deleted_at: now,
+            updated_at: updated.updated_at,
+            updated_by: updated.updated_by,
+            field_metadata: updated.field_metadata,
+          },
+          clientId
+        );
+        updatedItems.push(updated);
+      }
+    });
+
+    // Update state immediately
+    setItems((prev) =>
+      prev.map((i) => {
+        const u = updatedItems.find((x) => x.id === i.id);
+        return u || i;
+      })
+    );
+
+    // Broadcast update
+    for (const u of updatedItems) {
+      realtimeCoordinator.broadcastItemUpdate(u);
+    }
+
+    if (isOnline) {
+      syncEngine.flushOutbox();
+    }
+  };
+
   // Recipe actions
   const handleAddIngredientToList = async (name: string, quantity: string) => {
+    const detected = detectGroceryCategory(name);
     await handleCreateItem({
       name,
       quantity,
-      category: 'Pantry',
+      category: detected.category || 'Pantry',
       addToMealPlan: false,
     });
   };
 
   const handleAddAllIngredientsToList = async (ingredients: RecipeIngredient[]) => {
     for (const ing of ingredients) {
+      const detected = detectGroceryCategory(ing.name);
       await handleCreateItem({
         name: ing.name,
         quantity: ing.quantity,
-        category: 'Produce',
+        category: detected.category || 'Produce',
         addToMealPlan: false,
       });
     }
@@ -237,6 +410,8 @@ export const App: React.FC = () => {
     title: string;
     image_url: string;
     recipe_id?: string;
+    servings?: number;
+    calories_per_serving?: number;
   }) => {
     const clientId = syncEngine.getClientId();
     if (params.existingMealId) {
@@ -252,6 +427,8 @@ export const App: React.FC = () => {
         title: params.title,
         image_url: params.image_url,
         recipe_id: params.recipe_id,
+        servings: params.servings !== undefined ? params.servings : (existing?.servings ?? 1),
+        calories_per_serving: params.calories_per_serving !== undefined ? params.calories_per_serving : existing?.calories_per_serving,
         created_at: existing?.created_at || new Date().toISOString(),
       };
       if (!params.recipe_id) {
@@ -281,6 +458,8 @@ export const App: React.FC = () => {
         title: params.title,
         image_url: params.image_url,
         recipe_id: params.recipe_id,
+        servings: params.servings ?? 1,
+        calories_per_serving: params.calories_per_serving,
         created_at: new Date().toISOString(),
       };
       if (!params.recipe_id) {
@@ -336,6 +515,32 @@ export const App: React.FC = () => {
     setMeals((prev) => [...prev, mealWithId]);
   };
 
+  const handleBatchSaveMeals = async (newMeals: Meal[]) => {
+    const clientId = syncEngine.getClientId();
+    await db.transaction('rw', db.meals, db.outbox_operations, async () => {
+      await db.meals.bulkPut(newMeals);
+      for (const m of newMeals) {
+        await enqueueOutboxOperation(
+          'meals',
+          m.id,
+          'INSERT',
+          { ...m },
+          clientId
+        );
+      }
+    });
+
+    setMeals((prev) => {
+      const existingIds = new Set(prev.map((m) => m.id));
+      const toAdd = newMeals.filter((m) => !existingIds.has(m.id));
+      return [...prev, ...toAdd];
+    });
+
+    if (syncEngine.isEffectivelyOnline()) {
+      syncEngine.flushOutbox();
+    }
+  };
+
   // Household Member Add
   const handleAddHouseholdMember = async (name: string, role: 'Owner' | 'Member') => {
     const initials = name
@@ -381,6 +586,21 @@ export const App: React.FC = () => {
   };
 
   const activeGroceryCount = items.filter((i) => !i.deleted_at && !i.checked).length;
+
+  if (!authReady) {
+    return (
+      <div className="min-h-screen bg-cream-100 flex items-center justify-center px-4">
+        <div className="rounded-3xl border border-borderWarm bg-white p-8 text-center shadow-card">
+          <div className="mx-auto mb-4 h-12 w-12 animate-pulse rounded-full bg-terracotta-100" />
+          <p className="font-serif text-2xl text-ink-900">Preparing your household space…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isSupabaseConfigured && !authUser) {
+    return <AuthFlow onAuthenticated={handleAuthenticated} />;
+  }
 
   if (inviteToken !== null) {
     return (
@@ -437,6 +657,7 @@ export const App: React.FC = () => {
                   onToggleCheck={handleToggleCheck}
                   onUpdateQuantity={handleUpdateQuantity}
                   onDeleteItem={handleDeleteItem}
+                  onRemoveAll={handleRemoveAllItems}
                   onOpenAddItem={(cat) => {
                     if (cat) setAddItemCategory(cat);
                     setIsAddItemOpen(true);
@@ -460,6 +681,7 @@ export const App: React.FC = () => {
                     onSaveMeal={handleSaveMeal}
                     onDeleteMeal={handleDeleteMeal}
                     onAddMeal={handleAddMeal}
+                    onBatchSaveMeals={handleBatchSaveMeals}
                     isMobile={true}
                   />
                 </div>
@@ -467,6 +689,7 @@ export const App: React.FC = () => {
                 <div className="pb-24">
                   <Recipes
                     recipes={recipes}
+                    items={items}
                     onAddIngredientToList={handleAddIngredientToList}
                     onAddAllIngredientsToList={handleAddAllIngredientsToList}
                   />
@@ -487,6 +710,7 @@ export const App: React.FC = () => {
                     members={members}
                     onSelectMember={setCurrentMember}
                     onRefreshAllData={refreshAllData}
+                    onSignOut={handleSignOut}
                   />
                 </div>
               )}
@@ -522,6 +746,7 @@ export const App: React.FC = () => {
                 onToggleCheck={handleToggleCheck}
                 onUpdateQuantity={handleUpdateQuantity}
                 onDeleteItem={handleDeleteItem}
+                onRemoveAll={handleRemoveAllItems}
                 onOpenAddItem={(cat) => {
                   if (cat) setAddItemCategory(cat);
                   setIsAddItemOpen(true);
@@ -547,6 +772,7 @@ export const App: React.FC = () => {
                 onSaveMeal={handleSaveMeal}
                 onDeleteMeal={handleDeleteMeal}
                 onAddMeal={handleAddMeal}
+                onBatchSaveMeals={handleBatchSaveMeals}
               />
             )}
 
@@ -574,6 +800,7 @@ export const App: React.FC = () => {
                 members={members}
                 onSelectMember={setCurrentMember}
                 onRefreshAllData={refreshAllData}
+                onSignOut={handleSignOut}
               />
             )}
           </main>
@@ -593,6 +820,8 @@ export const App: React.FC = () => {
         onClose={() => setIsAddItemOpen(false)}
         onAddItem={handleCreateItem}
         defaultCategory={addItemCategory}
+        members={members}
+        currentMember={currentMember}
       />
 
       {/* Sync Status Screen / Modal */}

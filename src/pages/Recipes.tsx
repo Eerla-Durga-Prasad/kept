@@ -155,7 +155,7 @@ export const Recipes: React.FC<RecipesProps> = ({
   // If a recipe is selected, show detail view
   if (selectedRecipe) {
     return (
-      <div className="px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <div className="w-full max-w-full min-w-0 px-3 sm:px-6 lg:px-8 py-3.5 sm:py-6 box-border overflow-x-hidden">
         <RecipeDetail
           recipe={selectedRecipe}
           existingItems={items}

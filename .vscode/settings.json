@@ -1,0 +1,14 @@
+{
+  "css.lint.unknownAtRules": "ignore",
+  "json.schemaDownload.enable": false,
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "tsconfig.json",
+        "tsconfig.node.json"
+      ],
+      "schema": {}
+    }
+  ]
+}
+

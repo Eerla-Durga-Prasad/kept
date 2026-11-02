@@ -23,6 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_household_invitations_household_id ON household_i
 ALTER TABLE household_invitations ENABLE ROW LEVEL SECURITY;
 
 -- Household members can view active/historical invitations for their household
+DROP POLICY IF EXISTS "Household members can view invitations" ON household_invitations;
 CREATE POLICY "Household members can view invitations"
   ON household_invitations FOR SELECT
   USING (
@@ -32,6 +33,7 @@ CREATE POLICY "Household members can view invitations"
   );
 
 -- Only household Owners can create invitations
+DROP POLICY IF EXISTS "Household owners can insert invitations" ON household_invitations;
 CREATE POLICY "Household owners can insert invitations"
   ON household_invitations FOR INSERT
   WITH CHECK (
@@ -41,6 +43,7 @@ CREATE POLICY "Household owners can insert invitations"
   );
 
 -- Only household Owners can revoke or update invitations
+DROP POLICY IF EXISTS "Household owners can update invitations" ON household_invitations;
 CREATE POLICY "Household owners can update invitations"
   ON household_invitations FOR UPDATE
   USING (

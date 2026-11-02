@@ -10,6 +10,40 @@ export interface MealRecipeOption {
   recipeId?: string;
 }
 
+const normalizeMealName = (value: string): string =>
+  value.toLowerCase().trim().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+const MEAL_ALIAS_MAP = new Map<string, string[]>([
+  ['idli chutney', ['idli chutney', 'idli', 'idly', 'idli sambar', 'steamed idli']],
+  ['upma', ['upma', 'rava upma', 'uppittu', 'sooji upma']],
+  ['curd rice', ['curd rice', 'yogurt rice', 'thayir sadam', 'daddojanam']],
+  ['poha', ['poha', 'kanda poha', 'batata poha', 'aval']],
+  ['lemon rice', ['lemon rice', 'chitranna', 'nimmakaya annam']],
+  ['veg biryani', ['veg biryani', 'veg biryanii', 'vegetable biryani', 'hyderabadi veg biryani', 'dum biryani', 'hyderabadi dum biryani']],
+  ['paneer butter masala', ['paneer butter masala', 'panner butter masala', 'paneer makhani', 'panner makhani']],
+  ['dosa', ['dosa', 'masala dosa', 'crispy masala dosa', 'masala dosai', 'masala dosae']],
+  ['gulab jamun', ['gulab jamun', 'gulabjamun', 'gulab jamoon', 'jamun sweet']],
+  ['pulihora', ['pulihora', 'puli hora', 'puliogare', 'tamarind rice']],
+]);
+
+function mealMatchesName(query: string, mealName: string): boolean {
+  const q = normalizeMealName(query);
+  if (!q) return false;
+
+  const canonical = normalizeMealName(mealName);
+  const aliases = new Set<string>([
+    canonical,
+    ...(MEAL_ALIAS_MAP.get(canonical) || []).map(normalizeMealName),
+    ...Array.from(MEAL_ALIAS_MAP.entries()).flatMap(([key, values]) =>
+      key === canonical || values.some((value) => normalizeMealName(value) === canonical)
+        ? [key, ...values].map(normalizeMealName)
+        : []
+    ),
+  ]);
+
+  return aliases.has(q) || [...aliases].some((name) => name.includes(q) || q.includes(name));
+}
+
 export const MEAL_CATALOG: MealRecipeOption[] = [
   // Breakfasts
   {
@@ -22,14 +56,14 @@ export const MEAL_CATALOG: MealRecipeOption[] = [
   {
     id: 'meal_idli_chutney',
     name: 'Idli & Chutney',
-    image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=80',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Idli_Sambar.JPG/800px-Idli_Sambar.JPG?dish=idli',
     category: 'Breakfast',
     preparationTime: '20 mins',
   },
   {
     id: 'meal_poha',
     name: 'Poha',
-    image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80',
+    image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80&dish=poha',
     category: 'Breakfast',
     preparationTime: '15 mins',
   },
@@ -44,7 +78,7 @@ export const MEAL_CATALOG: MealRecipeOption[] = [
   {
     id: 'meal_upma',
     name: 'Upma',
-    image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80',
+    image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/A_photo_of_Upma.jpg/800px-A_photo_of_Upma.jpg?dish=upma',
     category: 'Breakfast',
     preparationTime: '15 mins',
   },
@@ -196,16 +230,7 @@ export function getMealDefinition(
     const byId = MEAL_CATALOG.find((m) => m.id === rawKey || m.recipeId === rawKey);
     if (byId) return byId;
 
-    const byName = MEAL_CATALOG.find((m) => {
-      const mNorm = m.name.toLowerCase().trim();
-      if (mNorm === normalized) return true;
-      if (normalized === 'dosa' && mNorm.includes('dosa')) return true;
-      if (normalized === 'crispy masala dosa' && mNorm === 'dosa') return true;
-      if (normalized === 'chapati & sabzi' && mNorm === 'chapati') return true;
-      if (normalized === 'hyderabadi dum biryani' && mNorm === 'veg biryani') return true;
-      if (normalized === 'comfort dal tadka' && mNorm === 'dal rice') return true;
-      return false;
-    });
+    const byName = MEAL_CATALOG.find((m) => mealMatchesName(normalized, m.name));
     if (byName) return byName;
 
     const cachedImage = getCachedMealImage(identifier);
@@ -239,17 +264,7 @@ export function getMealDefinition(
 
   // If title matches a predefined catalog meal
   if (title) {
-    const byName = MEAL_CATALOG.find((m) => {
-      const mNorm = m.name.toLowerCase().trim();
-      return (
-        mNorm === normalizedTitle ||
-        (normalizedTitle === 'dosa' && mNorm.includes('dosa')) ||
-        (normalizedTitle === 'crispy masala dosa' && mNorm === 'dosa') ||
-        (normalizedTitle === 'chapati & sabzi' && mNorm === 'chapati') ||
-        (normalizedTitle === 'hyderabadi dum biryani' && mNorm === 'veg biryani') ||
-        (normalizedTitle === 'comfort dal tadka' && mNorm === 'dal rice')
-      );
-    });
+    const byName = MEAL_CATALOG.find((m) => mealMatchesName(normalizedTitle, m.name));
     if (byName) {
       return {
         ...byName,

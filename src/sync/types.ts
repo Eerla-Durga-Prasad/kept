@@ -94,6 +94,7 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
   instructions: string[];
   created_at: string;
+  calories_per_serving?: number;
 }
 
 export interface Meal {
@@ -108,6 +109,8 @@ export interface Meal {
   notes?: string;
   created_at: string;
   date?: string; // YYYY-MM-DD
+  servings?: number;
+  calories_per_serving?: number;
 }
 
 export type OutboxOperationType = 'INSERT' | 'UPDATE' | 'DELETE';
