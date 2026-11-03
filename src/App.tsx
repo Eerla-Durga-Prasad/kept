@@ -86,6 +86,14 @@ export const App: React.FC = () => {
   // Auth state
   const [authUser, setAuthUser] = useState<KeptAuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [authView, setAuthView] = useState<'signin' | 'signup' | 'reset-password'>(() => {
+    if (typeof window !== 'undefined') {
+      if (window.location.hash.includes('type=recovery') || window.location.pathname === '/reset-password') {
+        return 'reset-password';
+      }
+    }
+    return 'signin';
+  });
 
   // Sync state
   const [syncStatus, setSyncStatus] = useState<SyncEngineStatus>(syncEngine.getStatus());
@@ -152,6 +160,15 @@ export const App: React.FC = () => {
           if (isMounted) {
             setAuthUser(user);
             syncEngine.setCurrentUserId(user.id);
+
+            // Clean tokens from URL hash or query if arriving via email confirmation
+            if (
+              typeof window !== 'undefined' &&
+              window.history?.replaceState &&
+              (window.location.hash.includes('access_token=') || window.location.search.includes('code='))
+            ) {
+              window.history.replaceState(null, '', window.location.pathname);
+            }
           }
         }
       } catch {
@@ -166,8 +183,13 @@ export const App: React.FC = () => {
     };
 
     hydrateSession();
-    const { data: authListener } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabaseClient.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
+
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthView('reset-password');
+      }
+
       if (session?.user) {
         const user: KeptAuthUser = {
           id: session.user.id,
@@ -178,6 +200,14 @@ export const App: React.FC = () => {
         };
         setAuthUser(user);
         syncEngine.setCurrentUserId(user.id);
+
+        if (
+          typeof window !== 'undefined' &&
+          window.history?.replaceState &&
+          (window.location.hash.includes('access_token=') || window.location.search.includes('code='))
+        ) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
         return;
       }
 
@@ -599,7 +629,7 @@ export const App: React.FC = () => {
   }
 
   if (isSupabaseConfigured && !authUser) {
-    return <AuthFlow onAuthenticated={handleAuthenticated} />;
+    return <AuthFlow onAuthenticated={handleAuthenticated} initialView={authView} />;
   }
 
   if (inviteToken !== null) {

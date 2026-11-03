@@ -1,4 +1,5 @@
 {
+  "$schema": "./.vscode/tsconfig.schema.json",
   "compilerOptions": {
     "composite": true,
     "skipLibCheck": true,

@@ -1,14 +1,16 @@
 {
   "css.lint.unknownAtRules": "ignore",
-  "json.schemaDownload.enable": false,
+  "scss.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore",
   "json.schemas": [
     {
       "fileMatch": [
         "tsconfig.json",
-        "tsconfig.node.json"
+        "tsconfig.*.json",
+        "/tsconfig.json",
+        "/tsconfig.*.json"
       ],
-      "schema": {}
+      "url": "./.vscode/tsconfig.schema.json"
     }
   ]
 }
-
