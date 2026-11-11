@@ -67,6 +67,10 @@
   .text-balance {
     text-wrap: balance;
   }
+  /* Safe-area bottom padding for iPhone notch */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
 
 /* Mobile responsive layout rules (<=767px) */

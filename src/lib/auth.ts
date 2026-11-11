@@ -31,8 +31,12 @@ export function validatePassword(password: string): PasswordValidationResult {
  * Get the application callback URL for email redirection
  */
 export function getAppBaseUrl(): string {
-  if (typeof window !== 'undefined' && window.location) {
-    return window.location.origin;
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin.replace(/\/$/, '');
+  }
+  const envUrl = (import.meta.env.VITE_APP_URL || '').trim();
+  if (envUrl) {
+    return envUrl.replace(/\/$/, '');
   }
   return '';
 }
@@ -130,7 +134,7 @@ export async function signUpWithEmailPassword(
     throw new Error(passwordValidation.message || 'Password must be at least 8 characters long.');
   }
 
-  const emailRedirectTo = getAppBaseUrl() ? `${getAppBaseUrl()}/` : undefined;
+  const emailRedirectTo = getAppBaseUrl() ? `${getAppBaseUrl()}/auth/callback` : undefined;
 
   const { data, error } = await supabase.auth.signUp({
     email: cleanEmail,
@@ -188,7 +192,7 @@ export async function resendConfirmationEmail(email: string): Promise<void> {
     throw new Error('Please enter a valid email address.');
   }
 
-  const emailRedirectTo = getAppBaseUrl() ? `${getAppBaseUrl()}/` : undefined;
+  const emailRedirectTo = getAppBaseUrl() ? `${getAppBaseUrl()}/auth/callback` : undefined;
 
   const { error } = await supabase.auth.resend({
     type: 'signup',
@@ -220,7 +224,7 @@ export async function sendPasswordResetEmail(email: string): Promise<void> {
     throw new Error('Please enter a valid email address.');
   }
 
-  const redirectTo = getAppBaseUrl() ? `${getAppBaseUrl()}/` : undefined;
+  const redirectTo = getAppBaseUrl() ? `${getAppBaseUrl()}/reset-password` : undefined;
 
   const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
     redirectTo,

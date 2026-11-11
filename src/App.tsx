@@ -17,6 +17,8 @@ import { enqueueOutboxOperation, generateUUID } from './sync/outbox';
 import { applyLocalItemUpdate } from './sync/conflictResolver';
 import { detectGroceryCategory } from './lib/groceryCategorizer';
 import { AuthFlow } from './components/AuthFlow';
+import { EmailVerificationView } from './components/EmailVerificationView';
+import { ResetPasswordView } from './components/ResetPasswordView';
 import { KeptAuthUser, getStoredProfile, saveProfileForUser, signOutCurrentUser } from './lib/auth';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 
@@ -86,13 +88,41 @@ export const App: React.FC = () => {
   // Auth state
   const [authUser, setAuthUser] = useState<KeptAuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [authView, setAuthView] = useState<'signin' | 'signup' | 'reset-password'>(() => {
-    if (typeof window !== 'undefined') {
-      if (window.location.hash.includes('type=recovery') || window.location.pathname === '/reset-password') {
-        return 'reset-password';
-      }
-    }
-    return 'signin';
+  const [authView, setAuthView] = useState<'signin' | 'signup' | 'reset-password'>('signin');
+
+  // Recovery & Email Confirmation active states
+  const [isRecoveryActive, setIsRecoveryActive] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    const search = window.location.search.toLowerCase();
+    return (
+      path.startsWith('/reset-password') ||
+      hash.includes('type=recovery') ||
+      search.includes('type=recovery') ||
+      search.includes('next=/reset-password')
+    );
+  });
+
+  const [isEmailConfirmationActive, setIsEmailConfirmationActive] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    const search = window.location.search.toLowerCase();
+    const isRecovery =
+      path.startsWith('/reset-password') ||
+      hash.includes('type=recovery') ||
+      search.includes('type=recovery') ||
+      search.includes('next=/reset-password');
+    if (isRecovery) return false;
+
+    return (
+      path.startsWith('/auth/callback') ||
+      path.startsWith('/auth/verified') ||
+      hash.includes('type=signup') ||
+      hash.includes('type=email_change') ||
+      (search.includes('code=') && !search.includes('next=/reset-password'))
+    );
   });
 
   // Sync state
@@ -128,6 +158,27 @@ export const App: React.FC = () => {
     const handleUrlChange = () => {
       setInviteToken(getInviteTokenFromLocation());
       setCurrentTab(getTabFromLocation());
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      const search = window.location.search.toLowerCase();
+
+      const recoveryFound =
+        path.startsWith('/reset-password') ||
+        hash.includes('type=recovery') ||
+        search.includes('type=recovery') ||
+        search.includes('next=/reset-password');
+
+      setIsRecoveryActive(recoveryFound);
+
+      if (!recoveryFound) {
+        setIsEmailConfirmationActive(
+          path.startsWith('/auth/callback') ||
+          path.startsWith('/auth/verified') ||
+          hash.includes('type=signup') ||
+          hash.includes('type=email_change') ||
+          (search.includes('code=') && !search.includes('next=/reset-password'))
+        );
+      }
     };
 
     window.addEventListener('popstate', handleUrlChange);
@@ -158,16 +209,19 @@ export const App: React.FC = () => {
           };
 
           if (isMounted) {
-            setAuthUser(user);
-            syncEngine.setCurrentUserId(user.id);
+            // Only set authUser as normal application user if not in an active recovery or confirmation flow
+            if (!isRecoveryActive && !isEmailConfirmationActive) {
+              setAuthUser(user);
+              syncEngine.setCurrentUserId(user.id);
 
-            // Clean tokens from URL hash or query if arriving via email confirmation
-            if (
-              typeof window !== 'undefined' &&
-              window.history?.replaceState &&
-              (window.location.hash.includes('access_token=') || window.location.search.includes('code='))
-            ) {
-              window.history.replaceState(null, '', window.location.pathname);
+              // Clean tokens from URL hash or query if arriving via email confirmation
+              if (
+                typeof window !== 'undefined' &&
+                window.history?.replaceState &&
+                (window.location.hash.includes('access_token=') || window.location.search.includes('code='))
+              ) {
+                window.history.replaceState(null, '', window.location.pathname);
+              }
             }
           }
         }
@@ -187,7 +241,14 @@ export const App: React.FC = () => {
       if (!isMounted) return;
 
       if (event === 'PASSWORD_RECOVERY') {
-        setAuthView('reset-password');
+        setIsRecoveryActive(true);
+        return;
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setAuthUser(null);
+        setIsRecoveryActive(false);
+        return;
       }
 
       if (session?.user) {
@@ -198,15 +259,19 @@ export const App: React.FC = () => {
           full_name: session.user.user_metadata?.full_name ?? session.user.user_metadata?.name ?? null,
           avatar_url: session.user.user_metadata?.avatar_url ?? null,
         };
-        setAuthUser(user);
-        syncEngine.setCurrentUserId(user.id);
 
-        if (
-          typeof window !== 'undefined' &&
-          window.history?.replaceState &&
-          (window.location.hash.includes('access_token=') || window.location.search.includes('code='))
-        ) {
-          window.history.replaceState(null, '', window.location.pathname);
+        // Don't auto-enter dashboard if user is currently resetting password or on email confirmation page
+        if (!isRecoveryActive && !isEmailConfirmationActive) {
+          setAuthUser(user);
+          syncEngine.setCurrentUserId(user.id);
+
+          if (
+            typeof window !== 'undefined' &&
+            window.history?.replaceState &&
+            (window.location.hash.includes('access_token=') || window.location.search.includes('code='))
+          ) {
+            window.history.replaceState(null, '', window.location.pathname);
+          }
         }
         return;
       }
@@ -218,7 +283,7 @@ export const App: React.FC = () => {
       isMounted = false;
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [isRecoveryActive, isEmailConfirmationActive]);
 
   // Load data from Dexie
   const refreshAllData = useCallback(async () => {
@@ -628,6 +693,54 @@ export const App: React.FC = () => {
     );
   }
 
+  // 1. Dedicated Email Confirmation Callback & Verification screen
+  if (isEmailConfirmationActive) {
+    return (
+      <EmailVerificationView
+        onVerificationComplete={async (user) => {
+          setIsEmailConfirmationActive(false);
+          await handleAuthenticated(user);
+          if (typeof window !== 'undefined' && window.history?.replaceState) {
+            window.history.replaceState({}, '', '/');
+          }
+        }}
+        onNavigateToSignIn={() => {
+          setIsEmailConfirmationActive(false);
+          setAuthUser(null);
+          setAuthView('signin');
+          if (typeof window !== 'undefined' && window.history?.replaceState) {
+            window.history.replaceState({}, '', '/');
+          }
+        }}
+      />
+    );
+  }
+
+  // 2. Dedicated Password Reset Page
+  if (isRecoveryActive || (typeof window !== 'undefined' && window.location.pathname.startsWith('/reset-password'))) {
+    return (
+      <ResetPasswordView
+        isRecoverySessionValid={isRecoveryActive}
+        onPasswordResetComplete={() => {
+          setIsRecoveryActive(false);
+          setAuthUser(null);
+          setAuthView('signin');
+          if (typeof window !== 'undefined' && window.history?.replaceState) {
+            window.history.replaceState({}, '', '/');
+          }
+        }}
+        onNavigateToSignIn={() => {
+          setIsRecoveryActive(false);
+          setAuthUser(null);
+          setAuthView('signin');
+          if (typeof window !== 'undefined' && window.history?.replaceState) {
+            window.history.replaceState({}, '', '/');
+          }
+        }}
+      />
+    );
+  }
+
   if (isSupabaseConfigured && !authUser) {
     return <AuthFlow onAuthenticated={handleAuthenticated} initialView={authView} />;
   }
@@ -769,7 +882,7 @@ export const App: React.FC = () => {
           />
 
           {/* Desktop Main Content Area */}
-          <main className="flex-1 min-w-0 bg-cream-100 overflow-y-auto pb-20 md:pb-0">
+          <main className="flex-1 min-w-0 bg-cream-100 overflow-y-auto pb-20 md:pb-6">
             {currentTab === 'groceries' && (
               <Groceries
                 items={items}

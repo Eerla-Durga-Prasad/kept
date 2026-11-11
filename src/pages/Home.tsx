@@ -79,7 +79,7 @@ export const Home: React.FC<HomeProps> = ({
   }, [meals]);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-8 animate-fadeIn">
+    <div className="max-w-4xl mx-auto px-4 sm:px-8 py-6 sm:py-8 animate-fadeIn overflow-x-hidden">
       {/* Mobile & Desktop Brand & Profile Header */}
       <div className="flex items-center justify-between pb-6 mb-6 border-b border-borderWarm">
         <div className="flex items-center gap-2">
@@ -119,7 +119,7 @@ export const Home: React.FC<HomeProps> = ({
 
       {/* Greeting section */}
       <div className="mb-8">
-        <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-ink-900">
+        <h1 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-medium tracking-tight text-ink-900 leading-tight break-words">
           {getGreeting()}, {currentMember.name}
         </h1>
         <p className="font-serif italic text-base sm:text-lg text-ink-600 mt-2 font-normal">
