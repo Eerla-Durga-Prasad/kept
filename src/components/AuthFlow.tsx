@@ -229,7 +229,7 @@ export const AuthFlow: React.FC<AuthFlowProps> = ({ onAuthenticated, initialView
           <span className="font-serif text-3xl font-semibold tracking-tight text-[#282019]">Kept</span>
           <p className="mt-2 font-serif text-xl text-[#282019]">Connect your cloud workspace</p>
           <p className="mt-2 text-xs sm:text-sm text-[#82776C] leading-relaxed">
-            To enable real authentication, paste your project credentials into <code className="bg-[#FFF8EF] px-1.5 py-0.5 rounded text-[#C94F13] font-mono text-xs">.env.local</code>:
+            To enable authentication, configure these environment variables in <code className="bg-[#FFF8EF] px-1.5 py-0.5 rounded text-[#C94F13] font-mono text-xs">.env.local</code> or your Vercel Project Settings:
           </p>
 
           <div className="my-5 rounded-2xl border border-[#EBD9C8] bg-[#FFFAF4] p-3 text-left font-mono text-[11px] text-[#282019]/80 space-y-1">

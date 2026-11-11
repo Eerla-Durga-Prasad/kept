@@ -40,6 +40,26 @@ import { Household } from './pages/Household';
 import { Settings } from './pages/Settings';
 import { MobileGroceryView } from './pages/MobileGroceryView';
 
+export const AUTH_ONLY_PATHS = new Set(['login', 'signin', 'signup', 'create-account', 'register']);
+
+export function resolveAuthViewFromPath(pathname: string): 'signin' | 'signup' {
+  const trimmedPath = pathname.toLowerCase().replace(/^\/|\/$/g, '');
+  if (trimmedPath === 'signup' || trimmedPath === 'create-account' || trimmedPath === 'register') {
+    return 'signup';
+  }
+  return 'signin';
+}
+
+export function normalizeUrlAfterAuth(): void {
+  if (typeof window === 'undefined' || !window.history?.replaceState) return;
+  const trimmedPath = window.location.pathname.toLowerCase().replace(/^\/|\/$/g, '');
+  if (AUTH_ONLY_PATHS.has(trimmedPath)) {
+    window.history.replaceState(null, '', '/');
+  } else if (window.location.hash.includes('access_token=') || window.location.search.includes('code=')) {
+    window.history.replaceState(null, '', window.location.pathname);
+  }
+}
+
 export const App: React.FC = () => {
   // Helpers to resolve tab and invite tokens from current URL location
   const getTabFromLocation = (): NavTab => {
@@ -88,7 +108,12 @@ export const App: React.FC = () => {
   // Auth state
   const [authUser, setAuthUser] = useState<KeptAuthUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [authView, setAuthView] = useState<'signin' | 'signup' | 'reset-password'>('signin');
+  const [authView, setAuthView] = useState<'signin' | 'signup' | 'reset-password'>(() => {
+    if (typeof window !== 'undefined') {
+      return resolveAuthViewFromPath(window.location.pathname);
+    }
+    return 'signin';
+  });
 
   // Recovery & Email Confirmation active states
   const [isRecoveryActive, setIsRecoveryActive] = useState<boolean>(() => {
@@ -133,6 +158,7 @@ export const App: React.FC = () => {
 
   const handleSignOut = useCallback(async () => {
     setAuthUser(null);
+    setAuthView('signin');
     syncEngine.setCurrentUserId('durga_prasad');
     if (supabase) {
       try {
@@ -159,8 +185,15 @@ export const App: React.FC = () => {
       setInviteToken(getInviteTokenFromLocation());
       setCurrentTab(getTabFromLocation());
       const path = window.location.pathname.toLowerCase();
+      const trimmedPath = path.replace(/^\/|\/$/g, '');
       const hash = window.location.hash.toLowerCase();
       const search = window.location.search.toLowerCase();
+
+      if (trimmedPath === 'signup' || trimmedPath === 'create-account' || trimmedPath === 'register') {
+        setAuthView('signup');
+      } else if (trimmedPath === 'login' || trimmedPath === 'signin') {
+        setAuthView('signin');
+      }
 
       const recoveryFound =
         path.startsWith('/reset-password') ||
@@ -214,14 +247,8 @@ export const App: React.FC = () => {
               setAuthUser(user);
               syncEngine.setCurrentUserId(user.id);
 
-              // Clean tokens from URL hash or query if arriving via email confirmation
-              if (
-                typeof window !== 'undefined' &&
-                window.history?.replaceState &&
-                (window.location.hash.includes('access_token=') || window.location.search.includes('code='))
-              ) {
-                window.history.replaceState(null, '', window.location.pathname);
-              }
+              // Clean tokens or auth-only route paths from URL once authenticated
+              normalizeUrlAfterAuth();
             }
           }
         }
@@ -265,13 +292,7 @@ export const App: React.FC = () => {
           setAuthUser(user);
           syncEngine.setCurrentUserId(user.id);
 
-          if (
-            typeof window !== 'undefined' &&
-            window.history?.replaceState &&
-            (window.location.hash.includes('access_token=') || window.location.search.includes('code='))
-          ) {
-            window.history.replaceState(null, '', window.location.pathname);
-          }
+          normalizeUrlAfterAuth();
         }
         return;
       }
@@ -324,6 +345,7 @@ export const App: React.FC = () => {
       avatar_url: user.avatar_url || profile.avatar_url,
     });
     syncEngine.setCurrentUserId(user.id);
+    normalizeUrlAfterAuth();
 
     const matchingMember = members.find((member) => member.user_id === user.id)
       || members.find((member) => member.name.toLowerCase() === (user.full_name || '').toLowerCase());
@@ -741,8 +763,8 @@ export const App: React.FC = () => {
     );
   }
 
-  if (isSupabaseConfigured && !authUser) {
-    return <AuthFlow onAuthenticated={handleAuthenticated} initialView={authView} />;
+  if (!authUser) {
+    return <AuthFlow key={authView} onAuthenticated={handleAuthenticated} initialView={authView} />;
   }
 
   if (inviteToken !== null) {
